@@ -1,5 +1,4 @@
 const express = require('express')
-const chalk = require('chalk')
 const webpack = require('webpack')
 const middleware = require('webpack-dev-middleware')
 const compiler = webpack(require('../webpack.config.js'))
@@ -42,4 +41,4 @@ if (index !== -1) {
 }
 
 app.listen(port)
-console.log(`Server started at ${chalk.green(`http://localhost:${port}/`)}`)
+console.log(`Server started at http://localhost:${port}/`)
