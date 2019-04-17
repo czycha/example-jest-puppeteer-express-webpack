@@ -1,34 +1,57 @@
+const path = require('path')
 const express = require('express')
 const webpack = require('webpack')
 const middleware = require('webpack-dev-middleware')
 const compiler = webpack(require('../webpack.config.js'))
 const app = express()
 
-// This function makes server rendering of asset references consistent with different webpack chunk/entry configurations
-function normalizeAssets (assets) {
-  return Array.isArray(assets) ? assets : [assets]
+// Turns input into an array if not one already
+function normalizeArray (arr) {
+  return Array.isArray(arr) ? arr : [arr]
+}
+
+// Gets all the Javascript paths that Webpack has compiled, across chunks
+function getAllJsPaths (webpackJson) {
+  const { assetsByChunkName } = webpackJson
+  return Object.values(assetsByChunkName).reduce((paths, assets) => {
+    for (let asset of normalizeArray(assets)) {
+      if (asset != null && asset.endsWith('.js')) {
+        paths.push(asset)
+      }
+    }
+    return paths
+  }, [])
+}
+
+// Optionally, just get the Javascript paths from specific chunks
+function getJsPathsFromChunks (webpackJson, chunkNames) {
+  const { assetsByChunkName } = webpackJson
+  chunkNames = normalizeArray(chunkNames)
+  return chunkNames.reduce((paths, name) => {
+    if (assetsByChunkName[name] != null) {
+      for (let asset of normalizeArray(assetsByChunkName[name])) {
+        if (asset != null && asset.endsWith('.js')) {
+          paths.push(asset)
+        }
+      }
+    }
+    return paths
+  }, [])
 }
 
 app.use(middleware(compiler, { serverSideRender: true }))
-
-// The following middleware would not be invoked until the latest build is finished.
 app.use((req, res) => {
-  const assetsByChunkName = res.locals.webpackStats.toJson().assetsByChunkName
-
-  // then use `assetsByChunkName` for server-sider rendering
-  // For example, if you have only one main chunk:
+  const webpackJson = res.locals.webpackStats.toJson()
+  const paths = getJsPaths(webpackJson)
   res.send(
-    `<html>
+    `<!DOCTYPE html>
+    <html>
       <head>
         <title>Test</title>
       </head>
       <body>
         <div id="root"></div>
-        ${normalizeAssets(assetsByChunkName.main)
-    .filter(path => path.endsWith('.js'))
-    .map(path => `<script src="${path}"></script>`)
-    .join('\n')
-}
+        ${paths.map((path) => `<script src="${path}"></script>`).join('')}
       </body>
     </html>`
   )
@@ -40,5 +63,6 @@ if (index !== -1) {
   port = +process.argv[index + 1] || port
 }
 
-app.listen(port)
-console.log(`Server started at http://localhost:${port}/`)
+app.listen(port, () => {
+  console.log(`Server started at http://localhost:${port}/`)
+})
