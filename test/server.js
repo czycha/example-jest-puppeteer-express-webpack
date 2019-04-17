@@ -48,7 +48,7 @@ const app = express()
   .use(middleware(compiler, { serverSideRender: true }))
   .use((req, res) => {
     const webpackJson = res.locals.webpackStats.toJson()
-    const paths = getJsPaths(webpackJson)
+    const paths = getAllJsPaths(webpackJson)
     res.send(
       `<!DOCTYPE html>
       <html>
